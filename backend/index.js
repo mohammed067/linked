@@ -3,9 +3,11 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import cors from 'cors';
 import morgan from 'morgan';
+import multer from 'multer'; // For handling file uploads
+import path from 'path';
 import { PORT, mongoDBURL } from './config.js';
 import User from './models/user.js';
-import upload from './uploadConfig.js';
+import upload from './uploadConfig.js'; // Multer configuration
 import { Resend } from 'resend';
 
 const app = express();
@@ -14,6 +16,7 @@ const resend = new Resend('re_3XoS7epQ_2cvHcg1jFmM1oHg38uYiqShB');
 app.use(express.json());
 app.use(cors());
 app.use(morgan('dev'));
+app.use('/uploads', express.static('uploads')); // Serve uploaded files
 
 mongoose.connect(mongoDBURL, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {
@@ -49,8 +52,9 @@ const sendOtpEmail = async (email, otp) => {
   }
 };
 
+// User registration endpoint
 app.post('/register', async (req, res) => {
-  const { email, password,} = req.body;
+  const { email, password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ error: "All fields are required" });
@@ -73,7 +77,6 @@ app.post('/register', async (req, res) => {
     const user = new User({
       email,
       password: hashedPassword,
-   
       otp,
       otpExpiry
     });
@@ -87,6 +90,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
+// Email confirmation endpoint
 app.post('/email-confirmation', async (req, res) => {
   const { email, otp } = req.body;
 
@@ -111,24 +115,27 @@ app.post('/email-confirmation', async (req, res) => {
   }
 });
 
+// Update user profile endpoint
 app.post('/profile', async (req, res) => {
   const { email, firstname, lastname } = req.body;
+
   try {
-    const existuser = await User.findOne({ email });
-    if (!existuser) {
+    const existingUser = await User.findOne({ email });
+    if (!existingUser) {
       return res.status(400).json({ message: "User not found" });
     }
 
-    existuser.firstname = firstname;
-    existuser.lastname = lastname;
-    
-    await existuser.save();
+    existingUser.firstname = firstname;
+    existingUser.lastname = lastname;
+
+    await existingUser.save();
     res.status(200).json({ message: "Details updated successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// Post a new post endpoint with media upload
 app.post('/post', upload.single('media'), async (req, res) => {
   const { title, userId } = req.body;
 
@@ -143,7 +150,6 @@ app.post('/post', upload.single('media'), async (req, res) => {
     }
 
     const mediaPath = req.file ? req.file.path : null;
-    console.log('mediaPath:', mediaPath);
 
     user.posts.push({
       title,
@@ -157,6 +163,9 @@ app.post('/post', upload.single('media'), async (req, res) => {
   }
 });
 
+
+
+// Comment on a post endpoint
 app.post('/comment', async (req, res) => {
   const { userId, postId, text } = req.body;
 

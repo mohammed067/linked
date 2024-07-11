@@ -1,6 +1,6 @@
 "use client";
 import Image from 'next/image';
-import React, { useState } from 'react';
+import React, { Profiler, useState } from 'react';
 import linkedin from '../../public/linkedin.png';
 import Google from '@/public/icons/google';
 import axios from 'axios';
@@ -12,7 +12,7 @@ const Signup = () => {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [res, setRes] = useState({});
-    
+    const [profile,setProfile]=('')
     const router = useRouter(); // Moved inside the component
 
     const handleSubmit = async (e) => {
@@ -31,7 +31,7 @@ const Signup = () => {
         }
 
         try {
-            const response = await axios.post("http://localhost:3007/register", { email, password });
+            const response = await axios.post("http://localhost:3007/register", { email, password,profile });
             setSuccess("Registration successful!");
             console.log(response); // Handle success scenario (redirect, show message, etc.)
 
@@ -39,7 +39,7 @@ const Signup = () => {
             setRes(response);
             console.log("checking res", res);
 
-            router.push('/confirm-email'); // Moved this line here to run after successful registration
+            router.push('/feed'); // Moved this line here to run after successful registration
           
         } catch (error) {
             if (error.response && error.response.data) {
@@ -83,7 +83,7 @@ const Signup = () => {
                             </div>
 
                             {error && <div className='text-red-500 text-sm'>{error}</div>}
-                            {success && <div className='text-green-500 text-sm'>{success}</div>}
+                            {/* {success && <div className='text-green-500 text-sm'>{success}</div>} */}
 
                             <div>
                                 <div className='md:w-[22.6rem] text-[#666666] text-[0.7rem] text-center'>

@@ -4,14 +4,20 @@ import bcrypt from 'bcrypt';
 import cors from 'cors';
 import morgan from 'morgan';
 import multer from 'multer'; // For handling file uploads
-import path from 'path';
 import { PORT, mongoDBURL } from './config.js';
 import User from './models/user.js';
 import upload from './uploadConfig.js'; // Multer configuration
 import { Resend } from 'resend';
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
 const resend = new Resend('re_3XoS7epQ_2cvHcg1jFmM1oHg38uYiqShB');
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(express.json());
 app.use(cors());
@@ -78,7 +84,8 @@ app.post('/register', async (req, res) => {
       email,
       password: hashedPassword,
       otp,
-      otpExpiry
+      otpExpiry,
+      profile
     });
 
     await user.save();
@@ -101,12 +108,12 @@ app.post('/email-confirmation', async (req, res) => {
       return res.status(400).json({ message: "User not found" });
     }
 
-    if (user.otp !== otp || user.otpExpiry < Date.now()) {
+    if (user.otp != otp || user.otpExpiry < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    user.otp = null;
-    user.otpExpiry = null;
+    // user.otp = null;
+    // user.otpExpiry = null;
     await user.save();
 
     res.status(200).json({ message: "Email confirmed successfully" });
@@ -114,6 +121,19 @@ app.post('/email-confirmation', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+app.get('/get/:email',async(req,res)=>{
+  try{
+    const user=await User.findOne({email: req.params.email});
+    if(!user){
+      return res.status(400).json({ error: "No such user"})
+    }
+    res.status(200).json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+})
 
 // Update user profile endpoint
 app.post('/profile', async (req, res) => {
@@ -164,6 +184,57 @@ app.post('/post', upload.single('media'), async (req, res) => {
 });
 
 
+
+//editing profile such as photo
+
+
+
+// Edit profile such as photo
+// Edit profile such as photo
+app.post('/edit', upload.single('media'), async (req, res) => {
+  const { userId } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+
+    const mediaPath = req.file ? req.file.path : null;
+    user.profile = mediaPath;
+    await user.save(); // Corrected this line
+
+    return res.status(200).json({ message: "Profile picture uploaded successfully" });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const existingUser = await User.findOne({ email });
+
+    if (!existingUser) {
+      return res.status(400).json({ error: 'user not exist' });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, existingUser.password);
+
+    if (!passwordMatch) {
+      return res.status(400).json({ error: 'Wrong email or password' });
+    }
+
+    // Password matches, return the user object or other data as needed
+    return res.status(200).json({ user: existingUser });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // Comment on a post endpoint
 app.post('/comment', async (req, res) => {

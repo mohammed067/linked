@@ -20,6 +20,8 @@ const Postcard = ({ setWritepost }) => {
     const [user, setUser] = useState(null);
     const [userId, setUserId] = useState(null);
     const [media, setMedia] = useState(null);
+    const [profname,setProfname]=useState(null)
+    const [profpic,setProfpic]=useState(null)
 
     useEffect(() => {
         const getlocalstorage = localStorage.getItem("user");
@@ -29,6 +31,31 @@ const Postcard = ({ setWritepost }) => {
             setUserId(user.user._id);
         }
     }, []);
+
+    useEffect(() => {
+        if (user) {
+            console.log("thisis user of post",user)
+            const fetchUserProfile = async () => {
+                try {
+                    const response = await axios.get(`http://localhost:3007/get/${user.user.email}`);
+                    console.log(response.data, "this is final response");
+                    if (!response.data.profile) {
+                        setProfname(user.user.email[0]);
+                    } else {
+                        const profilePath = response.data.profile ? response.data.profile.replace("public", "") : null;
+                        console.log("this is user result", profilePath);
+                        setProfpic(profilePath);
+                        console.log(profpic)
+                    }
+                } catch (err) {
+                    console.log(err.message);
+                    console.log(err.response);
+                }
+            };
+
+            fetchUserProfile();
+        }
+    }, [user]);
 
     const handleEmojiClick = (emojiObject) => {
         setTitle(prevText => prevText + emojiObject.emoji);
